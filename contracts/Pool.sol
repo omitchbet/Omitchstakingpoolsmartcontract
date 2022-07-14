@@ -34,9 +34,10 @@ contract Pool {
     event Unstake(address indexed from, uint256 amount);
     event YieldWithdraw(address indexed to, uint256 amount);
     event FundAccount(address indexed to, uint256 amount);
-    event CliamReward(address indexed to, uint256 amount);
+    event Withdraw(address indexed to, uint256 amount);
     event UpdateWinning(address indexed to, uint256 amount);
-    event UpdateLoss(address indexed to, uint256 amount);
+    event UpdateBalance(address indexed to, uint256 amount);
+    event PlayBet(address indexed to, uint256 amount);
 
     constructor(IERC20 _daiToken) {
         daiToken = _daiToken;
@@ -135,6 +136,19 @@ contract Pool {
         return fraction / 1000;
     }
 
+    function bet(uint256 _amount, address _userAddress) external {
+        require(
+            bettingBalance[_userAddress] >= _amount && isBetting[_userAddress],
+            "You cannot bet above balance"
+        );
+
+        uint256 _amountTrafer = _amount;
+        _amount = 0;
+        bettingBalance[_userAddress] -= _amountTrafer;
+
+        emit PlayBet(_userAddress, _amount);
+    }
+
     function updateWinning(uint256 _amount, address _userAddress) external {
         require(
             _amount > 0 && isBetting[_userAddress],
@@ -148,32 +162,32 @@ contract Pool {
         emit UpdateWinning(_userAddress, _amount);
     }
 
-    function updateLoss(uint256 _amount, address _userAddress) external {
+    function updatebalance(uint256 _amount, address _userAddress) external {
         require(
-            _amount > 0 && isBetting[_userAddress],
-            "You cannot update zero tokens"
+            _amount >= 0 && isBetting[_userAddress],
+            "You cannot update negative token"
         );
 
         uint256 _amountTrafer = _amount;
         _amount = 0;
-        bettingBalance[_userAddress] -= _amountTrafer;
+        bettingBalance[_userAddress] = _amountTrafer;
 
-        emit UpdateLoss(_userAddress, _amount);
+        emit UpdateBalance(_userAddress, _amount);
     }
 
-    function claimReward(uint256 _amount) external {
+    function withdraw(uint256 _amount, address _userAddress) external {
         require(
-            _amount > 0 && bettingBalance[msg.sender] >= _amount,
+            _amount > 0 && bettingBalance[_userAddress] >= _amount,
             "You cannot claim zero tokens"
         );
 
         uint256 balTransfer = _amount;
         _amount = 0;
-        bettingBalance[msg.sender] -= balTransfer;
-        if (bettingBalance[msg.sender] == 0) {
-            isBetting[msg.sender] = false;
+        bettingBalance[_userAddress] -= balTransfer;
+        if (bettingBalance[_userAddress] == 0) {
+            isBetting[_userAddress] = false;
         }
-        daiToken.transfer(msg.sender, balTransfer);
-        emit CliamReward(msg.sender, balTransfer);
+        daiToken.transfer(_userAddress, balTransfer);
+        emit Withdraw(_userAddress, balTransfer);
     }
 }
