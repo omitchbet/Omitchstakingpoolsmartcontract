@@ -1,6 +1,6 @@
-# Omitch Stacking Pool Smart Contract
+# Omitch Staking Pool Smart Contract
 
-The Omitch pool smart contract contains functionality for a stacking pool that provides liquidity for bettors and liquidity providers are rewarded based on the percentage of liquidity they have in the pool.
+The Omitch pool smart contract contains functionality for a staking pool that provides liquidity for bettors and liquidity providers are rewarded based on the percentage of liquidity they have in the pool.
 
 Try running some of the following tasks:
 
