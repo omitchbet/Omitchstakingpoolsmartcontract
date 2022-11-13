@@ -5,7 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "hardhat/console.sol";
 
-contract Pool {
+import "./MultiSigWallet.sol";
+
+abstract contract Pool is MultiSigWallet {
     // userAddress => stakingBalance
     mapping(address => uint256) public stakingBalance;
     // userAddress => isStaking boolean
@@ -112,18 +114,15 @@ contract Pool {
             "You cannot fund zero tokens"
         );
 
-        uint256 transactionFee;
-        (transactionFee) = calculateTransactionFee(_amount);
-        uint256 totalAmount = transactionFee + _amount;
+        uint256 balTransfer = _amount;
+        _amount = 0;
 
-        daiToken.transferFrom(msg.sender, address(this), totalAmount);
+        daiToken.transferFrom(msg.sender, address(this), balTransfer);
 
-        bettingBalance[msg.sender] += _amount;
+        bettingBalance[msg.sender] += balTransfer;
         isBetting[msg.sender] = true;
         betters.push(msg.sender);
-        emit FundAccount(msg.sender, _amount);
-
-        distributeTransactionFee(transactionFee);
+        emit FundAccount(msg.sender, balTransfer);
     }
 
     function calculateTransactionFee(uint256 _amount)
@@ -136,58 +135,23 @@ contract Pool {
         return fraction / 1000;
     }
 
-    function bet(uint256 _amount, address _userAddress) external {
-        require(
-            bettingBalance[_userAddress] >= _amount && isBetting[_userAddress],
-            "You cannot bet above balance"
-        );
+    function withdraw(uint256 _amount, address _userAddress)
+        external
+        onlyOwner
+    {
+        require(_amount > 0, "You cannot claim zero tokens");
 
-        uint256 _amountTrafer = _amount;
+        uint256 balWithdraw = _amount;
         _amount = 0;
-        bettingBalance[_userAddress] -= _amountTrafer;
 
-        emit PlayBet(_userAddress, _amount);
-    }
+        uint256 transactionFee;
+        (transactionFee) = calculateTransactionFee(balWithdraw);
+        uint256 withdrawAmount = balWithdraw - transactionFee;
 
-    function updateWinning(uint256 _amount, address _userAddress) external {
-        require(
-            _amount > 0 && isBetting[_userAddress],
-            "You cannot update zero tokens"
-        );
+        distributeTransactionFee(transactionFee);
 
-        uint256 _amountTrafer = _amount;
-        _amount = 0;
-        bettingBalance[_userAddress] += _amountTrafer;
+        daiToken.transfer(_userAddress, withdrawAmount);
 
-        emit UpdateWinning(_userAddress, _amount);
-    }
-
-    function updatebalance(uint256 _amount, address _userAddress) external {
-        require(
-            _amount >= 0 && isBetting[_userAddress],
-            "You cannot update negative token"
-        );
-
-        uint256 _amountTrafer = _amount;
-        _amount = 0;
-        bettingBalance[_userAddress] = _amountTrafer;
-
-        emit UpdateBalance(_userAddress, _amount);
-    }
-
-    function withdraw(uint256 _amount, address _userAddress) external {
-        require(
-            _amount > 0 && bettingBalance[_userAddress] >= _amount,
-            "You cannot claim zero tokens"
-        );
-
-        uint256 balTransfer = _amount;
-        _amount = 0;
-        bettingBalance[_userAddress] -= balTransfer;
-        if (bettingBalance[_userAddress] == 0) {
-            isBetting[_userAddress] = false;
-        }
-        daiToken.transfer(_userAddress, balTransfer);
-        emit Withdraw(_userAddress, balTransfer);
+        emit Withdraw(_userAddress, withdrawAmount);
     }
 }
