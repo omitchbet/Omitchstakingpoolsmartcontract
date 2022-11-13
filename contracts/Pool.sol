@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "hardhat/console.sol";
 
-import "./MultiSigWallet.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
-abstract contract Pool is MultiSigWallet {
+abstract contract Pool is Ownable {
     // userAddress => stakingBalance
     mapping(address => uint256) public stakingBalance;
     // userAddress => isStaking boolean
